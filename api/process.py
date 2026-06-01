@@ -95,11 +95,21 @@ def handle_stateless_pipeline():
         files = search_res.get('files', [])
         
         # If the user doesn't have the spreadsheet yet, build it automatically!
+       import time # Make sure import time is at the top of your file!
+
         if not files:
             create_url = "https://www.googleapis.com/drive/v3/files"
             meta = {"name": "My Memory Vault", "mimeType": "application/vnd.google-apps.spreadsheet"}
             sheet_creation = requests.post(create_url, headers=auth_header, json=meta).json()
+            
+            if 'id' not in sheet_creation:
+                return jsonify({"error": "Google Drive refused to initialize a new vault file. Check storage space."}), 400
+                
             spreadsheet_id = sheet_creation['id']
+            
+            # Give Google's server 1.5 seconds to breathe and index the file
+            time.sleep(1.5) 
+            
             init_url = f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values/Sheet1!A1:B1:append?valueInputOption=USER_ENTERED"
             requests.post(init_url, headers=auth_header, json={"values": [["Timestamp", "Log_Entry"]]})
         else:
