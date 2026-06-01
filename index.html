@@ -34,8 +34,8 @@
         </div>
 
         <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2">
-            <label class="block text-sm font-medium">2. Connect Your AI Engine</label>
-            <input type="password" id="gemini-key-input" placeholder="Paste Gemini API Key here" 
+            <label class="block text-sm font-medium">2. Connect Your AI Engine (Optional)</label>
+<input type="password" id="gemini-key-input" placeholder="Using master trial engine (Paste custom key to override)"
                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-blue-400 focus:outline-none focus:border-blue-500">
         </div>
     </div>
@@ -48,7 +48,7 @@
         </button>
 
         <div class="mt-8 px-4 max-w-md w-full">
-            <p id="status-msg" class="text-lg text-gray-400 font-medium">Connect Google Drive & add API Key to activate</p>
+            <p id="status-msg" class="text-lg text-gray-400 font-medium">Connect Google Drive to activate</p>
             <div id="response-box" class="mt-4 p-4 bg-gray-800 border border-gray-700 rounded-xl text-left hidden overflow-y-auto max-h-48">
                 <p id="ai-response-text" class="text-sm text-gray-300 leading-relaxed"></p>
             </div>
@@ -96,12 +96,17 @@
         googleBtn.addEventListener('click', () => { tokenClient.requestAccessToken(); });
 
         function checkValidationState() {
-            if (googleAccessToken && geminiInput.value.trim().length > 10) {
-                micBtn.disabled = false;
-                micBtn.className = "bg-blue-600 hover:bg-blue-500 rounded-full w-44 h-44 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none cursor-pointer";
-                statusMsg.innerText = "Tap the Mic and speak naturally";
-            }
-        }
+    // Now it ONLY checks if Google Drive is connected
+    if (googleAccessToken) {
+        micBtn.disabled = false;
+        micBtn.className = "bg-blue-600 hover:bg-blue-500 rounded-full w-44 h-44 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none cursor-pointer";
+        statusMsg.innerText = "Tap the Mic and speak naturally";
+    } else {
+        micBtn.disabled = true;
+        micBtn.className = "bg-gray-700 opacity-50 rounded-full w-44 h-44 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none";
+        statusMsg.innerText = "Connect Google Drive to activate";
+    }
+}
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
