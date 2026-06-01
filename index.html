@@ -208,7 +208,7 @@
         });
 
         // 6. Chat Interface Logic
-        function appendChatMessage(sender, text, isStore = false) {
+        function appendChatMessage(sender, text, actionType = 'none') {
             const bubble = document.createElement('div');
             bubble.className = `flex w-full ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
 
@@ -218,11 +218,19 @@
                 inner.className = 'max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 sm:p-4 text-sm bg-indigo-600 text-white rounded-br-none shadow-md';
                 inner.innerText = text;
             } else {
-                inner.className = 'max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 sm:p-4 text-sm bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-none shadow-sm';
+                // Custom styling based on whether it is an error or a normal response
+                const isError = actionType === 'error';
+                const bgColor = isError ? 'bg-red-950/50 border-red-900/50 text-red-200' : 'bg-slate-800 border-slate-700 text-slate-200';
+                inner.className = `max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 sm:p-4 text-sm border rounded-bl-none shadow-sm ${bgColor}`;
                 
-                // Add icon based on action
-                const iconHTML = isStore ? '<span class="text-emerald-400 mr-2">💾 Saved:</span>' : '<span class="text-blue-400 mr-2">🔍 Found:</span>';
-                inner.innerHTML = `<p class="font-semibold text-slate-400 mb-1 text-xs uppercase tracking-wider">Vault AI</p><div>${iconHTML}${text}</div>`;
+                // Determine the correct icon
+                let iconHTML = '';
+                if (actionType === 'store') iconHTML = '<span class="text-emerald-400 mr-2">💾 Saved:</span>';
+                else if (actionType === 'retrieve') iconHTML = '<span class="text-blue-400 mr-2">🔍 Found:</span>';
+                else if (actionType === 'error') iconHTML = '<span class="text-red-400 mr-2">⚠️ Alert:</span>';
+
+                const titleColor = isError ? 'text-red-400' : 'text-slate-400';
+                inner.innerHTML = `<p class="font-semibold ${titleColor} mb-1 text-xs uppercase tracking-wider">Vault AI</p><div>${iconHTML}${text}</div>`;
             }
 
             bubble.appendChild(inner);
@@ -328,7 +336,7 @@
         }
 
         // 8. Backend Communication
-        async function dispatchExecutionPipeline(textPayload) {
+       async function dispatchExecutionPipeline(textPayload) {
             try {
                 const reqHeaders = new Headers();
                 reqHeaders.append("X-User-Gemini-Key", inputApiKey.value.trim());
@@ -341,17 +349,26 @@
                     body: JSON.stringify({ voice_input: textPayload })
                 });
 
-                const jsonResult = await response.json();
+                // Read the raw text first to prevent the "<" HTML crash
+                const rawText = await response.text();
+                let jsonResult;
+                
+                try {
+                    jsonResult = JSON.parse(rawText);
+                } catch (parseError) {
+                    // If it fails to parse, it means Vercel threw a hard limit error
+                    throw new Error("The master trial engine has reached its limit! Please click the Settings (⚙️) icon and add your personal Gemini API key to continue.");
+                }
                 
                 if (response.ok) {
-                    // Append the AI's response directly to the chat!
-                    const isStoreAction = jsonResult.intent === "STORE";
-                    appendChatMessage('system', jsonResult.output_text, isStoreAction);
+                    const actionType = jsonResult.intent === "STORE" ? 'store' : 'retrieve';
+                    appendChatMessage('system', jsonResult.output_text, actionType);
                 } else {
                     throw new Error(jsonResult.error || "Execution fault");
                 }
             } catch (err) {
-                showToast(err.message, "error");
+                // Route the error directly into the chat interface as a red bubble
+                appendChatMessage('system', err.message, 'error');
             }
         }
     </script>
