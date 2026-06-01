@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify
 from google import genai
 from google.genai import types
@@ -16,13 +17,24 @@ def handle_stateless_pipeline():
     payload = request.get_json() or {}
     voice_input = payload.get("voice_input", "").strip()
 
-    if not user_gemini_key or not google_token or not voice_input:
-        return jsonify({"error": "Missing credentials or input payload"}), 400
+    # REMOVED user_gemini_key from this strict gate check
+    if not google_token or not voice_input:
+        return jsonify({"error": "Missing Google authorization token or voice input payload"}), 400
+
+    # FALLBACK ENGINE GATE: Determine which API Key to assign
+    # Clean up the key if it's sent as a blank string or "null" from frontend
+    user_key_clean = (user_gemini_key or "").strip()
+    if not user_key_clean or user_key_clean.lower() == "null":
+        active_api_key = os.environ.get("MASTER_GEMINI_KEY")
+    else:
+        active_api_key = user_key_clean
+
+    if not active_api_key:
+        return jsonify({"error": "Server configuration fault: No active AI Engine key setup found."}), 400
 
     try:
-        # Start the AI engine with the user's personal key
-        ai_client = genai.Client(api_key=user_gemini_key)
-        
+        # Start the AI engine using the dynamically resolved key
+        ai_client = genai.Client(api_key=active_api_key)
         # Tell the AI exactly what today's date is so it can understand time
         current_moment = datetime.datetime.now()
         current_date_str = current_moment.strftime("%Y-%m-%d")
