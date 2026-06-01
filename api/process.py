@@ -35,11 +35,23 @@ def handle_stateless_pipeline():
     try:
         # Start the AI engine using the dynamically resolved key
         ai_client = genai.Client(api_key=active_api_key)
-        # Tell the AI exactly what today's date is so it can understand time
-        current_moment = datetime.datetime.now()
-        current_date_str = current_moment.strftime("%Y-%m-%d")
-        current_day_name = current_moment.strftime("%A")
+        
+        # ... (keep your existing system_instruction, ai_analysis, and google sheets code here exactly as it is) ...
+        # (I am omitting the middle logic to keep this short, DO NOT delete your spreadsheet logic!)
 
+    except Exception as error:
+        err_msg = str(error).lower()
+        # Catch quota/limit errors and send a friendly, organized message
+        if "429" in err_msg or "quota" in err_msg or "exhausted" in err_msg:
+            clean_error = "The master trial engine is currently resting! Please open Settings (⚙️) and add your personal Gemini API key to continue."
+            return jsonify({"error": clean_error}), 429
+            
+        # Catch invalid key errors
+        if "api_key" in err_msg or "400" in err_msg:
+            return jsonify({"error": "Your personal API key seems invalid. Please check your settings."}), 400
+            
+        # Generic clean error for anything else
+        return jsonify({"error": f"Cognitive interruption: {str(error)}"}), 500
         system_instruction = f"""
         You are the cognitive layer of a personal memory vault. Today's date is exactly {current_date_str} ({current_day_name}).
         Determine the user's intent:
