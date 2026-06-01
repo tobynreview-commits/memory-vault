@@ -8,74 +8,147 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         @keyframes pulse-ring {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 25px rgba(99, 102, 241, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
         }
-        .listening { animation: pulse-ring 1.5s infinite; background-color: #ef4444 !important; }
+        .listening { animation: pulse-ring 1.5s infinite; background-color: #4f46e5 !important; }
+        .toast-enter { transform: translateY(-100%); opacity: 0; }
+        .toast-active { transform: translateY(0); opacity: 1; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="bg-gray-900 text-white font-sans min-h-screen flex flex-col justify-between">
+<body class="bg-slate-950 text-slate-100 font-sans h-screen overflow-hidden">
 
-    <header class="p-6 text-center shadow-lg bg-gray-800 border-b border-gray-700">
-        <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Memory Vault</h1>
-        <p class="text-gray-400 text-sm mt-1">Your personal memory time capsule</p>
-    </header>
+    <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3 w-11/12 max-w-md"></div>
 
-    <div class="max-w-md w-full mx-auto p-6 space-y-4">
-        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center justify-between">
-            <div>
-                <p class="font-medium">1. Storage Account</p>
-                <p id="auth-status" class="text-xs text-red-400 mt-0.5">Disconnected</p>
+    <div id="page-landing" class="h-full flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black transition-opacity duration-700">
+        <div class="max-w-sm w-full space-y-8 text-center">
+            <div class="space-y-2">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500/10 mb-4 border border-indigo-500/20">
+                    <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                </div>
+                <h1 class="text-4xl font-extrabold tracking-tight text-white">Memory Vault</h1>
+                <p class="text-slate-400 text-sm">Your personal, AI-powered timeline.</p>
             </div>
-            <button id="google-login-btn" class="bg-white text-gray-900 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-gray-100 transition shadow">
-                Connect Google Drive
+            
+            <button id="btn-connect" class="w-full group relative flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 focus:ring-offset-slate-900 shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all">
+                Connect Google Drive to Enter
             </button>
-        </div>
-
-        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2">
-            <label class="block text-sm font-medium">2. Connect Your AI Engine (Optional)</label>
-<input type="password" id="gemini-key-input" placeholder="Using master trial engine (Paste custom key to override)"
-                   class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-blue-400 focus:outline-none focus:border-blue-500">
         </div>
     </div>
 
-    <main class="flex-grow flex flex-col items-center justify-center p-6 text-center">
-        <button id="mic-btn" disabled class="bg-gray-700 opacity-50 rounded-full w-44 h-44 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none">
-            <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
-            </svg>
-        </button>
+    <div id="page-vault" class="hidden h-full flex-col bg-slate-950 transition-opacity duration-700 opacity-0">
+        
+        <header class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
+            <div class="flex items-center space-x-3">
+                <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                <span class="font-semibold text-slate-200">Vault Connected</span>
+            </div>
+            <button id="btn-settings" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+        </header>
 
-        <div class="mt-8 px-4 max-w-md w-full">
-            <p id="status-msg" class="text-lg text-gray-400 font-medium">Connect Google Drive to activate</p>
-            <div id="response-box" class="mt-4 p-4 bg-gray-800 border border-gray-700 rounded-xl text-left hidden overflow-y-auto max-h-48">
-                <p id="ai-response-text" class="text-sm text-gray-300 leading-relaxed"></p>
+        <main class="flex-1 flex flex-col items-center justify-center p-6 relative">
+            
+            <div id="response-card" class="absolute top-8 w-full max-w-md p-5 bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-xl transition-all duration-500 opacity-0 scale-95 translate-y-[-20px] pointer-events-none">
+                <div class="flex items-center space-x-3 mb-2">
+                    <span id="response-icon" class="text-xl">✨</span>
+                    <h3 id="response-title" class="font-semibold text-white">Action Complete</h3>
+                </div>
+                <p id="response-text" class="text-slate-300 text-sm leading-relaxed"></p>
+            </div>
+
+            <button id="btn-mic" class="bg-slate-800 border-2 border-slate-700 hover:border-indigo-500 rounded-full w-48 h-48 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none z-10 group">
+                <svg class="w-16 h-16 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                </svg>
+            </button>
+            <p id="status-msg" class="mt-8 text-slate-400 font-medium tracking-wide">Tap to speak</p>
+        </main>
+    </div>
+
+    <div id="modal-settings" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700 w-11/12 max-w-sm rounded-2xl p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="modal-content">
+            <h2 class="text-xl font-bold text-white mb-2">Engine Settings</h2>
+            <p class="text-xs text-slate-400 mb-6">If the master trial is out of limits, paste your personal Gemini API key here. It saves locally to your browser.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Personal API Key</label>
+                    <input type="password" id="input-api-key" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-sm text-indigo-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                </div>
+                <button id="btn-save-settings" class="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors">
+                    Save & Close
+                </button>
             </div>
         </div>
-    </main>
+    </div>
 
     <script>
+        // Core State
         let googleAccessToken = null;
         let tokenClient;
 
-        const googleBtn = document.getElementById('google-login-btn');
-        const authStatus = document.getElementById('auth-status');
-        const geminiInput = document.getElementById('gemini-key-input');
-        const micBtn = document.getElementById('mic-btn');
+        // DOM Elements
+        const pageLanding = document.getElementById('page-landing');
+        const pageVault = document.getElementById('page-vault');
+        const btnConnect = document.getElementById('btn-connect');
+        
+        const btnMic = document.getElementById('btn-mic');
         const statusMsg = document.getElementById('status-msg');
-        const responseBox = document.getElementById('response-box');
-        const aiResponseText = document.getElementById('ai-response-text');
+        
+        const modalSettings = document.getElementById('modal-settings');
+        const modalContent = document.getElementById('modal-content');
+        const btnSettings = document.getElementById('btn-settings');
+        const btnSaveSettings = document.getElementById('btn-save-settings');
+        const inputApiKey = document.getElementById('input-api-key');
+        
+        const responseCard = document.getElementById('response-card');
+        const responseTitle = document.getElementById('response-title');
+        const responseText = document.getElementById('response-text');
+        const responseIcon = document.getElementById('response-icon');
 
+        // 1. Initialize API Key from Local Storage
         if(localStorage.getItem('user_gemini_key')) {
-            geminiInput.value = localStorage.getItem('user_gemini_key');
+            inputApiKey.value = localStorage.getItem('user_gemini_key');
         }
 
-        geminiInput.addEventListener('input', () => {
-            localStorage.setItem('user_gemini_key', geminiInput.value.trim());
-            checkValidationState();
-        });
+        // 2. Beautiful Toast Notification System
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+            const icon = type === 'error' ? '⚠️' : '✅';
+            
+            toast.className = `toast-enter flex items-center gap-3 p-4 rounded-xl border ${bgColor} backdrop-blur-md shadow-lg`;
+            toast.innerHTML = `<span class="text-xl">${icon}</span><p class="text-sm font-medium leading-snug">${message}</p>`;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-active'); }, 10);
+            
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.remove('toast-active');
+                toast.classList.add('toast-enter');
+                setTimeout(() => toast.remove(), 400);
+            }, 5000);
+        }
 
+        // 3. Page Transition Logic
+        function navigateToVault() {
+            pageLanding.classList.add('opacity-0');
+            setTimeout(() => {
+                pageLanding.classList.add('hidden');
+                pageVault.classList.remove('hidden');
+                // slight delay for smooth fade in
+                setTimeout(() => pageVault.classList.remove('opacity-0'), 50);
+            }, 700);
+        }
+
+        // 4. Google Login Initialization
         window.onload = function () {
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: '571412709857-siqsk2qtgo3ee9vfks39g0asc55eis69.apps.googleusercontent.com', 
@@ -83,30 +156,46 @@
                 callback: (tokenResponse) => {
                     if (tokenResponse && tokenResponse.access_token) {
                         googleAccessToken = tokenResponse.access_token;
-                        authStatus.innerText = "Connected";
-                        authStatus.className = "text-xs text-green-400 mt-0.5";
-                        googleBtn.innerText = "Account Linked";
-                        googleBtn.className = "bg-green-600 text-white font-semibold px-4 py-2 rounded-lg text-sm pointer-events-none";
-                        checkValidationState();
+                        btnConnect.innerText = "Authorized!";
+                        btnConnect.classList.replace('bg-indigo-600', 'bg-emerald-600');
+                        setTimeout(navigateToVault, 800);
+                    } else {
+                        showToast("Google authorization failed. Please try again.");
                     }
                 },
             });
         };
+        btnConnect.addEventListener('click', () => { tokenClient.requestAccessToken(); });
 
-        googleBtn.addEventListener('click', () => { tokenClient.requestAccessToken(); });
+        // 5. Settings Modal Logic
+        btnSettings.addEventListener('click', () => {
+            modalSettings.classList.remove('hidden');
+            setTimeout(() => {
+                modalSettings.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        });
 
-        function checkValidationState() {
-    // Now it ONLY checks if Google Drive is connected
-    if (googleAccessToken) {
-        micBtn.disabled = false;
-        micBtn.className = "bg-blue-600 hover:bg-blue-500 rounded-full w-44 h-44 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none cursor-pointer";
-        statusMsg.innerText = "Tap the Mic and speak naturally";
-    } else {
-        micBtn.disabled = true;
-        micBtn.className = "bg-gray-700 opacity-50 rounded-full w-44 h-44 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none";
-        statusMsg.innerText = "Connect Google Drive to activate";
-    }
-}
+        btnSaveSettings.addEventListener('click', () => {
+            localStorage.setItem('user_gemini_key', inputApiKey.value.trim());
+            modalSettings.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => modalSettings.classList.add('hidden'), 300);
+            showToast("Settings saved locally.", "success");
+        });
+
+        // 6. Voice & API Pipeline
+        function showResponseCard(title, text, intent) {
+            responseTitle.innerText = title;
+            responseText.innerText = text;
+            responseIcon.innerText = intent === "STORE" ? "💾" : "🔍";
+            
+            responseCard.classList.remove('opacity-0', 'scale-95', 'translate-y-[-20px]', 'pointer-events-none');
+            // Auto hide after 8 seconds
+            setTimeout(() => {
+                responseCard.classList.add('opacity-0', 'scale-95', 'translate-y-[-20px]', 'pointer-events-none');
+            }, 8000);
+        }
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
@@ -114,32 +203,38 @@
             recognition.lang = 'en-IN'; 
             recognition.interimResults = false;
 
-            micBtn.addEventListener('click', () => { recognition.start(); });
+            btnMic.addEventListener('click', () => { 
+                responseCard.classList.add('opacity-0', 'pointer-events-none'); // Hide card on new mic press
+                recognition.start(); 
+            });
 
             recognition.onstart = () => {
-                micBtn.classList.add('listening');
+                btnMic.classList.add('listening');
                 statusMsg.innerText = "Listening to your voice...";
-                responseBox.classList.add('hidden');
+                statusMsg.classList.add('text-indigo-400');
             };
 
             recognition.onresult = async (event) => {
                 const utterance = event.results[0][0].transcript;
-                statusMsg.innerText = "Analyzing memory context...";
-                micBtn.classList.remove('listening');
+                statusMsg.innerText = "Processing in the Vault...";
+                statusMsg.classList.remove('text-indigo-400');
+                btnMic.classList.remove('listening');
                 await dispatchExecutionPipeline(utterance);
             };
 
             recognition.onerror = () => {
-                micBtn.classList.remove('listening');
-                statusMsg.innerText = "Voice tracking timeout. Try speaking again.";
+                btnMic.classList.remove('listening');
+                statusMsg.innerText = "Voice tracking timeout. Tap to try again.";
+                statusMsg.classList.remove('text-indigo-400');
             };
-            recognition.onend = () => { micBtn.classList.remove('listening'); };
+        } else {
+            showToast("Voice recognition is not supported in this browser. Please use Chrome.");
         }
 
         async function dispatchExecutionPipeline(textPayload) {
             try {
                 const reqHeaders = new Headers();
-                reqHeaders.append("X-User-Gemini-Key", geminiInput.value.trim());
+                reqHeaders.append("X-User-Gemini-Key", inputApiKey.value.trim());
                 reqHeaders.append("X-Google-Access-Token", googleAccessToken);
                 reqHeaders.append("Content-Type", "application/json");
 
@@ -150,17 +245,21 @@
                 });
 
                 const jsonResult = await response.json();
+                
                 if (response.ok) {
-                    statusMsg.innerText = jsonResult.intent === "STORE" ? "✅ Memory Saved" : "🔍 Query Complete";
-                    responseBox.classList.remove('hidden');
-                    aiResponseText.innerText = jsonResult.output_text;
+                    statusMsg.innerText = "Tap to speak";
+                    showResponseCard(
+                        jsonResult.intent === "STORE" ? "Memory Saved" : "Memory Retrieved",
+                        jsonResult.output_text,
+                        jsonResult.intent
+                    );
                 } else {
+                    // This catches our clean 429 quota message and displays it beautifully
                     throw new Error(jsonResult.error || "Execution fault");
                 }
             } catch (err) {
-                statusMsg.innerText = "❌ Pipeline Interrupted";
-                responseBox.classList.remove('hidden');
-                aiResponseText.innerText = `System Error: ${err.message}`;
+                statusMsg.innerText = "Tap to speak";
+                showToast(err.message, "error");
             }
         }
     </script>
