@@ -7,21 +7,33 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        @keyframes pulse-ring {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 25px rgba(99, 102, 241, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
-        }
-        .listening { animation: pulse-ring 1.5s infinite; background-color: #4f46e5 !important; }
         .toast-enter { transform: translateY(-100%); opacity: 0; }
         .toast-active { transform: translateY(0); opacity: 1; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Custom Scrollbar for chat */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        /* Mic Recording Animation */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .recording { 
+            color: #ef4444 !important; 
+            background-color: rgba(239, 68, 68, 0.1) !important;
+            animation: pulse-red 1.5s infinite;
+        }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans h-screen overflow-hidden">
+<body class="bg-slate-950 text-slate-100 font-sans h-screen overflow-hidden flex flex-col">
 
     <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3 w-11/12 max-w-md"></div>
 
-    <div id="page-landing" class="h-full flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black transition-opacity duration-700">
+    <div id="page-landing" class="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black transition-opacity duration-700">
         <div class="max-w-sm w-full space-y-8 text-center">
             <div class="space-y-2">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500/10 mb-4 border border-indigo-500/20">
@@ -31,41 +43,51 @@
                 <p class="text-slate-400 text-sm">Your personal, AI-powered timeline.</p>
             </div>
             
-            <button id="btn-connect" class="w-full group relative flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 focus:ring-offset-slate-900 shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all">
+            <button id="btn-connect" class="w-full group relative flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all">
                 Connect Google Drive to Enter
             </button>
         </div>
     </div>
 
-    <div id="page-vault" class="hidden h-full flex-col bg-slate-950 transition-opacity duration-700 opacity-0">
+    <div id="page-vault" class="flex-1 flex flex-col h-full bg-slate-950 opacity-0 transition-opacity duration-700 hidden">
         
-        <header class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md z-10 shrink-0">
             <div class="flex items-center space-x-3">
                 <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
-                <span class="font-semibold text-slate-200">Vault Connected</span>
+                <span class="font-semibold text-slate-200 text-sm tracking-wide">Vault Connected</span>
             </div>
             <button id="btn-settings" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             </button>
         </header>
 
-        <main class="flex-1 flex flex-col items-center justify-center p-6 relative">
-            
-            <div id="response-card" class="absolute top-8 w-full max-w-md p-5 bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-xl transition-all duration-500 opacity-0 scale-95 translate-y-[-20px] pointer-events-none">
-                <div class="flex items-center space-x-3 mb-2">
-                    <span id="response-icon" class="text-xl">✨</span>
-                    <h3 id="response-title" class="font-semibold text-white">Action Complete</h3>
+        <main id="chat-container" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth">
+            <div class="flex w-full justify-start">
+                <div class="max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 text-sm bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-none shadow-sm">
+                    <p class="font-semibold text-indigo-400 mb-1">System</p>
+                    <p>Welcome to your timeline. Type a memory below, or click the mic to start recording. Click the mic again to stop and save.</p>
                 </div>
-                <p id="response-text" class="text-slate-300 text-sm leading-relaxed"></p>
             </div>
-
-            <button id="btn-mic" class="bg-slate-800 border-2 border-slate-700 hover:border-indigo-500 rounded-full w-48 h-48 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none z-10 group">
-                <svg class="w-16 h-16 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
-                </svg>
-            </button>
-            <p id="status-msg" class="mt-8 text-slate-400 font-medium tracking-wide">Tap to speak</p>
         </main>
+
+        <div class="p-3 sm:p-4 bg-slate-950/90 backdrop-blur-lg border-t border-slate-800 shrink-0">
+            <div class="max-w-4xl mx-auto flex items-end gap-2 bg-slate-900 border border-slate-700 rounded-3xl p-1.5 focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/50 transition-all shadow-lg">
+                
+                <button id="btn-mic" class="p-3 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full transition-all shrink-0 outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                    </svg>
+                </button>
+                
+                <textarea id="text-input" rows="1" placeholder="Store a memory or ask a question..." class="flex-1 max-h-32 bg-transparent text-slate-200 px-2 py-3 focus:outline-none resize-none text-sm placeholder-slate-500 self-center"></textarea>
+                
+                <button id="btn-send" class="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-500 transition-all shrink-0 shadow-md outline-none">
+                    <svg class="w-5 h-5 translate-x-[1px] translate-y-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </div>
 
     <div id="modal-settings" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
@@ -78,9 +100,10 @@
                     <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Personal API Key</label>
                     <input type="password" id="input-api-key" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-sm text-indigo-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <button id="btn-save-settings" class="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors">
-                    Save & Close
-                </button>
+                <div class="flex gap-3">
+                    <button id="btn-close-settings" class="w-1/3 bg-slate-800 text-slate-300 font-semibold py-3 rounded-xl hover:bg-slate-700 transition-colors">Cancel</button>
+                    <button id="btn-save-settings" class="w-2/3 bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors">Save Key</button>
+                </div>
             </div>
         </div>
     </div>
@@ -89,32 +112,32 @@
         // Core State
         let googleAccessToken = null;
         let tokenClient;
+        let isRecording = false;
+        let speechRecognitionObj = null;
 
         // DOM Elements
         const pageLanding = document.getElementById('page-landing');
         const pageVault = document.getElementById('page-vault');
         const btnConnect = document.getElementById('btn-connect');
         
+        const chatContainer = document.getElementById('chat-container');
+        const textInput = document.getElementById('text-input');
         const btnMic = document.getElementById('btn-mic');
-        const statusMsg = document.getElementById('status-msg');
+        const btnSend = document.getElementById('btn-send');
         
         const modalSettings = document.getElementById('modal-settings');
         const modalContent = document.getElementById('modal-content');
         const btnSettings = document.getElementById('btn-settings');
         const btnSaveSettings = document.getElementById('btn-save-settings');
+        const btnCloseSettings = document.getElementById('btn-close-settings');
         const inputApiKey = document.getElementById('input-api-key');
-        
-        const responseCard = document.getElementById('response-card');
-        const responseTitle = document.getElementById('response-title');
-        const responseText = document.getElementById('response-text');
-        const responseIcon = document.getElementById('response-icon');
 
         // 1. Initialize API Key from Local Storage
         if(localStorage.getItem('user_gemini_key')) {
             inputApiKey.value = localStorage.getItem('user_gemini_key');
         }
 
-        // 2. Beautiful Toast Notification System
+        // 2. Toast Notification System
         function showToast(message, type = 'error') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -125,11 +148,7 @@
             toast.innerHTML = `<span class="text-xl">${icon}</span><p class="text-sm font-medium leading-snug">${message}</p>`;
             
             container.appendChild(toast);
-            
-            // Animate in
             setTimeout(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-active'); }, 10);
-            
-            // Animate out and remove
             setTimeout(() => {
                 toast.classList.remove('toast-active');
                 toast.classList.add('toast-enter');
@@ -143,7 +162,6 @@
             setTimeout(() => {
                 pageLanding.classList.add('hidden');
                 pageVault.classList.remove('hidden');
-                // slight delay for smooth fade in
                 setTimeout(() => pageVault.classList.remove('opacity-0'), 50);
             }, 700);
         }
@@ -168,69 +186,148 @@
         btnConnect.addEventListener('click', () => { tokenClient.requestAccessToken(); });
 
         // 5. Settings Modal Logic
-        btnSettings.addEventListener('click', () => {
-            modalSettings.classList.remove('hidden');
-            setTimeout(() => {
-                modalSettings.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
-        });
-
+        function toggleModal(show) {
+            if (show) {
+                modalSettings.classList.remove('hidden');
+                setTimeout(() => {
+                    modalSettings.classList.remove('opacity-0');
+                    modalContent.classList.remove('scale-95');
+                }, 10);
+            } else {
+                modalSettings.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => modalSettings.classList.add('hidden'), 300);
+            }
+        }
+        btnSettings.addEventListener('click', () => toggleModal(true));
+        btnCloseSettings.addEventListener('click', () => toggleModal(false));
         btnSaveSettings.addEventListener('click', () => {
             localStorage.setItem('user_gemini_key', inputApiKey.value.trim());
-            modalSettings.classList.add('opacity-0');
-            modalContent.classList.add('scale-95');
-            setTimeout(() => modalSettings.classList.add('hidden'), 300);
+            toggleModal(false);
             showToast("Settings saved locally.", "success");
         });
 
-        // 6. Voice & API Pipeline
-        function showResponseCard(title, text, intent) {
-            responseTitle.innerText = title;
-            responseText.innerText = text;
-            responseIcon.innerText = intent === "STORE" ? "💾" : "🔍";
+        // 6. Chat Interface Logic
+        function appendChatMessage(sender, text, isStore = false) {
+            const bubble = document.createElement('div');
+            bubble.className = `flex w-full ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+
+            const inner = document.createElement('div');
             
-            responseCard.classList.remove('opacity-0', 'scale-95', 'translate-y-[-20px]', 'pointer-events-none');
-            // Auto hide after 8 seconds
-            setTimeout(() => {
-                responseCard.classList.add('opacity-0', 'scale-95', 'translate-y-[-20px]', 'pointer-events-none');
-            }, 8000);
+            if (sender === 'user') {
+                inner.className = 'max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 sm:p-4 text-sm bg-indigo-600 text-white rounded-br-none shadow-md';
+                inner.innerText = text;
+            } else {
+                inner.className = 'max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 sm:p-4 text-sm bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-none shadow-sm';
+                
+                // Add icon based on action
+                const iconHTML = isStore ? '<span class="text-emerald-400 mr-2">💾 Saved:</span>' : '<span class="text-blue-400 mr-2">🔍 Found:</span>';
+                inner.innerHTML = `<p class="font-semibold text-slate-400 mb-1 text-xs uppercase tracking-wider">Vault AI</p><div>${iconHTML}${text}</div>`;
+            }
+
+            bubble.appendChild(inner);
+            chatContainer.appendChild(bubble);
+            
+            // Auto-scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
+        // Auto-resize textarea
+        textInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // Handle Send (Enter key or button)
+        function handleSend() {
+            const payload = textInput.value.trim();
+            if (!payload) return;
+            
+            // Reset input UI
+            textInput.value = "";
+            textInput.style.height = 'auto';
+            
+            // Add to chat and process
+            appendChatMessage('user', payload);
+            dispatchExecutionPipeline(payload);
+        }
+        
+        btnSend.addEventListener('click', handleSend);
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        });
+
+        // 7. Toggle Mic Voice Recognition Logic
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'en-IN'; 
-            recognition.interimResults = false;
+            speechRecognitionObj = new SpeechRecognition();
+            speechRecognitionObj.lang = 'en-IN'; 
+            
+            // CRITICAL: Make it listen continuously until manual stop, and show results live
+            speechRecognitionObj.continuous = true;
+            speechRecognitionObj.interimResults = true;
 
             btnMic.addEventListener('click', () => { 
-                responseCard.classList.add('opacity-0', 'pointer-events-none'); // Hide card on new mic press
-                recognition.start(); 
+                if (isRecording) {
+                    // Manual Stop
+                    speechRecognitionObj.stop(); 
+                } else {
+                    // Manual Start
+                    textInput.value = ""; // clear box for new dictation
+                    speechRecognitionObj.start(); 
+                }
             });
 
-            recognition.onstart = () => {
-                btnMic.classList.add('listening');
-                statusMsg.innerText = "Listening to your voice...";
-                statusMsg.classList.add('text-indigo-400');
+            speechRecognitionObj.onstart = () => {
+                isRecording = true;
+                btnMic.classList.add('recording');
+                textInput.placeholder = "Listening... (Click mic to stop and send)";
             };
 
-            recognition.onresult = async (event) => {
-                const utterance = event.results[0][0].transcript;
-                statusMsg.innerText = "Processing in the Vault...";
-                statusMsg.classList.remove('text-indigo-400');
-                btnMic.classList.remove('listening');
-                await dispatchExecutionPipeline(utterance);
+            speechRecognitionObj.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                
+                // Show dictation live in the text box
+                textInput.value = finalTranscript + interimTranscript;
             };
 
-            recognition.onerror = () => {
-                btnMic.classList.remove('listening');
-                statusMsg.innerText = "Voice tracking timeout. Tap to try again.";
-                statusMsg.classList.remove('text-indigo-400');
+            speechRecognitionObj.onend = () => {
+                isRecording = false;
+                btnMic.classList.remove('recording');
+                textInput.placeholder = "Store a memory or search...";
+                
+                // Automatically send if there is text when the mic turns off
+                if (textInput.value.trim().length > 0) {
+                    handleSend();
+                }
+            };
+
+            speechRecognitionObj.onerror = (e) => {
+                isRecording = false;
+                btnMic.classList.remove('recording');
+                textInput.placeholder = "Store a memory or search...";
+                
+                if (e.error !== 'no-speech') {
+                    showToast("Microphone error. Please try typing instead.");
+                }
             };
         } else {
-            showToast("Voice recognition is not supported in this browser. Please use Chrome.");
+            btnMic.style.display = 'none'; // Hide mic if browser unsupported
         }
 
+        // 8. Backend Communication
         async function dispatchExecutionPipeline(textPayload) {
             try {
                 const reqHeaders = new Headers();
@@ -247,18 +344,13 @@
                 const jsonResult = await response.json();
                 
                 if (response.ok) {
-                    statusMsg.innerText = "Tap to speak";
-                    showResponseCard(
-                        jsonResult.intent === "STORE" ? "Memory Saved" : "Memory Retrieved",
-                        jsonResult.output_text,
-                        jsonResult.intent
-                    );
+                    // Append the AI's response directly to the chat!
+                    const isStoreAction = jsonResult.intent === "STORE";
+                    appendChatMessage('system', jsonResult.output_text, isStoreAction);
                 } else {
-                    // This catches our clean 429 quota message and displays it beautifully
                     throw new Error(jsonResult.error || "Execution fault");
                 }
             } catch (err) {
-                statusMsg.innerText = "Tap to speak";
                 showToast(err.message, "error");
             }
         }
