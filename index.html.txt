@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Memory Vault</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .listening { animation: pulse-ring 1.5s infinite; background-color: #ef4444 !important; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen flex flex-col justify-between">
+
+    <header class="p-6 text-center shadow-lg bg-gray-800 border-b border-gray-700">
+        <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Memory Vault</h1>
+        <p class="text-gray-400 text-sm mt-1">Your personal memory time capsule</p>
+    </header>
+
+    <div class="max-w-md w-full mx-auto p-6 space-y-4">
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center justify-between">
+            <div>
+                <p class="font-medium">1. Storage Account</p>
+                <p id="auth-status" class="text-xs text-red-400 mt-0.5">Disconnected</p>
+            </div>
+            <button id="google-login-btn" class="bg-white text-gray-900 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-gray-100 transition shadow">
+                Connect Google Drive
+            </button>
+        </div>
+
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2">
+            <label class="block text-sm font-medium">2. Connect Your AI Engine</label>
+            <input type="password" id="gemini-key-input" placeholder="Paste Gemini API Key here" 
+                   class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-blue-400 focus:outline-none focus:border-blue-500">
+        </div>
+    </div>
+
+    <main class="flex-grow flex flex-col items-center justify-center p-6 text-center">
+        <button id="mic-btn" disabled class="bg-gray-700 opacity-50 rounded-full w-44 h-44 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none">
+            <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+            </svg>
+        </button>
+
+        <div class="mt-8 px-4 max-w-md w-full">
+            <p id="status-msg" class="text-lg text-gray-400 font-medium">Connect Google Drive & add API Key to activate</p>
+            <div id="response-box" class="mt-4 p-4 bg-gray-800 border border-gray-700 rounded-xl text-left hidden overflow-y-auto max-h-48">
+                <p id="ai-response-text" class="text-sm text-gray-300 leading-relaxed"></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let googleAccessToken = null;
+        let tokenClient;
+
+        const googleBtn = document.getElementById('google-login-btn');
+        const authStatus = document.getElementById('auth-status');
+        const geminiInput = document.getElementById('gemini-key-input');
+        const micBtn = document.getElementById('mic-btn');
+        const statusMsg = document.getElementById('status-msg');
+        const responseBox = document.getElementById('response-box');
+        const aiResponseText = document.getElementById('ai-response-text');
+
+        if(localStorage.getItem('user_gemini_key')) {
+            geminiInput.value = localStorage.getItem('user_gemini_key');
+        }
+
+        geminiInput.addEventListener('input', () => {
+            localStorage.setItem('user_gemini_key', geminiInput.value.trim());
+            checkValidationState();
+        });
+
+        window.onload = function () {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: '571412709857-siqsk2qtgo3ee9vfks39g0asc55eis69.apps.googleusercontent.com', 
+                scope: 'https://www.googleapis.com/auth/drive.file',
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        googleAccessToken = tokenResponse.access_token;
+                        authStatus.innerText = "Connected";
+                        authStatus.className = "text-xs text-green-400 mt-0.5";
+                        googleBtn.innerText = "Account Linked";
+                        googleBtn.className = "bg-green-600 text-white font-semibold px-4 py-2 rounded-lg text-sm pointer-events-none";
+                        checkValidationState();
+                    }
+                },
+            });
+        };
+
+        googleBtn.addEventListener('click', () => { tokenClient.requestAccessToken(); });
+
+        function checkValidationState() {
+            if (googleAccessToken && geminiInput.value.trim().length > 10) {
+                micBtn.disabled = false;
+                micBtn.className = "bg-blue-600 hover:bg-blue-500 rounded-full w-44 h-44 flex items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none cursor-pointer";
+                statusMsg.innerText = "Tap the Mic and speak naturally";
+            }
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-IN'; 
+            recognition.interimResults = false;
+
+            micBtn.addEventListener('click', () => { recognition.start(); });
+
+            recognition.onstart = () => {
+                micBtn.classList.add('listening');
+                statusMsg.innerText = "Listening to your voice...";
+                responseBox.classList.add('hidden');
+            };
+
+            recognition.onresult = async (event) => {
+                const utterance = event.results[0][0].transcript;
+                statusMsg.innerText = "Analyzing memory context...";
+                micBtn.classList.remove('listening');
+                await dispatchExecutionPipeline(utterance);
+            };
+
+            recognition.onerror = () => {
+                micBtn.classList.remove('listening');
+                statusMsg.innerText = "Voice tracking timeout. Try speaking again.";
+            };
+            recognition.onend = () => { micBtn.classList.remove('listening'); };
+        }
+
+        async function dispatchExecutionPipeline(textPayload) {
+            try {
+                const reqHeaders = new Headers();
+                reqHeaders.append("X-User-Gemini-Key", geminiInput.value.trim());
+                reqHeaders.append("X-Google-Access-Token", googleAccessToken);
+                reqHeaders.append("Content-Type", "application/json");
+
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: reqHeaders,
+                    body: JSON.stringify({ voice_input: textPayload })
+                });
+
+                const jsonResult = await response.json();
+                if (response.ok) {
+                    statusMsg.innerText = jsonResult.intent === "STORE" ? "✅ Memory Saved" : "🔍 Query Complete";
+                    responseBox.classList.remove('hidden');
+                    aiResponseText.innerText = jsonResult.output_text;
+                } else {
+                    throw new Error(jsonResult.error || "Execution fault");
+                }
+            } catch (err) {
+                statusMsg.innerText = "❌ Pipeline Interrupted";
+                responseBox.classList.remove('hidden');
+                aiResponseText.innerText = `System Error: ${err.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
